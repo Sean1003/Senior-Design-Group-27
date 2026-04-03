@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Projection Grid Painter</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+        
+        /* The Info Key in the Corner */
+        .info-key {
+            position: absolute; top: 20px; right: 20px;
+            background: #1e1e1e; padding: 15px; border-radius: 8px;
+            border: 1px solid #333; font-size: 0.85rem; line-height: 1.4;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .info-key h4 { margin: 0 0 8px 0; color: #3498db; text-transform: uppercase; letter-spacing: 1px; }
+        .info-key ul { list-style: none; padding: 0; margin: 0; }
+        .info-key li { margin-bottom: 4px; }
+        .key-code { font-family: monospace; font-weight: bold; color: #fff; background: #333; padding: 2px 4px; border-radius: 3px; }
+
+        .toolbar { 
+            display: flex; flex-direction: column; gap: 15px; 
+            background: #1e1e1e; padding: 20px; border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 25px;
+            border: 1px solid #333; width: 500px;
+        }
+
+        .tool-section { display: flex; align-items: center; justify-content: space-between; }
+        .options { display: flex; gap: 8px; }
+
+        .opt-btn {
+            width: 40px; height: 40px; border-radius: 6px; border: 2px solid #444;
+            background: #333; color: white; cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; transition: 0.2s;
+        }
+        .opt-btn.active { border-color: #fff; background: #555; transform: scale(1.1); }
+
+        .swatch { width: 40px; height: 40px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: 0.2s; }
+        .swatch.active { border-color: white; transform: scale(1.1); }
+
+        .grid { 
+            display: grid; grid-template-columns: repeat(8, 55px); 
+            grid-template-rows: repeat(8, 55px); gap: 6px; 
+            background: #252525; padding: 12px; border-radius: 8px;
+        }
+        .cell {
+            width: 55px; height: 55px; display: flex; align-items: center; justify-content: center;
+            background: #2a2a2a; border-radius: 4px; cursor: pointer;
+            font-weight: bold; font-size: 1.1rem; border: 1px solid #333; transition: 0.1s;
+        }
+
+        .button-group { display: flex; gap: 15px; margin-top: 25px; }
+        button.action-btn { padding: 12px 30px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .export-btn { background: #27ae60; color: white; }
+        .clear-btn { background: #c0392b; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="info-key">
+        <h4>Grid Key</h4>
+        <ul>
+            <li><strong>Levels:</strong> <span class="key-code">0-3</span> (Height)</li>
+            <hr style="border:0; border-top:1px solid #333; margin: 8px 0;">
+            <li><span class="key-code">r</span> : Red</li>
+            <li><span class="key-code">g</span> : Green</li>
+            <li><span class="key-code">b</span> : Blue</li>
+            <li><span class="key-code">y</span> : Yellow</li>
+            <li><span class="key-code">o</span> : Orange</li>
+            <li><span class="key-code">p</span> : Purple</li>
+            <li><span class="key-code">u</span> : Unassigned</li>
+        </ul>
+    </div>
+
+    <h2>Projection Grid Painter</h2>
+
+    <div class="toolbar">
+        <div class="tool-section">
+            <span>Height Level:</span>
+            <div class="options" id="height-options">
+                <button class="opt-btn active" data-val="0">0</button>
+                <button class="opt-btn" data-val="1">1</button>
+                <button class="opt-btn" data-val="2">2</button>
+                <button class="opt-btn" data-val="3">3</button>
+            </div>
+        </div>
+
+        <div class="tool-section">
+            <span>Color:</span>
+            <div class="options" id="color-options">
+                <div class="swatch active" id="default-swatch" style="background: #2ecc71;" data-code="g"></div>
+                <div class="swatch" style="background: #e74c3c;" data-code="r"></div>
+                <div class="swatch" style="background: #3498db;" data-code="b"></div>
+                <div class="swatch" style="background: #f1c40f;" data-code="y"></div>
+                <div class="swatch" style="background: #e67e22;" data-code="o"></div>
+                <div class="swatch" style="background: #9b59b6;" data-code="p"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="button-group">
+        <button class="action-btn clear-btn" onclick="clearGrid()">Clear Grid</button>
+        <button class="action-btn export-btn" onclick="exportToTxt()">Export grid.txt</button>
+    </div>
+
+    <script>
+        const gridElement = document.getElementById('grid');
+        const heightBtns = document.querySelectorAll('#height-options .opt-btn');
+        const swatches = document.querySelectorAll('.swatch');
+
+        let selectedHeight = "0";
+        let selectedColor = "g";
+        let state = [];
+
+        function initGrid() {
+            gridElement.innerHTML = '';
+            state = Array.from({ length: 8 }, () => 
+                Array.from({ length: 8 }, () => ({ level: 0, color: 'u' }))
+            );
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${r}-${c}`;
+                    cell.innerText = `0u`;
+                    cell.style.color = '#555';
+                    cell.style.borderColor = '#333';
+                    cell.onclick = () => paintCell(r, c);
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        heightBtns.forEach(btn => {
+            btn.onclick = () => {
+                heightBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedHeight = btn.dataset.val;
+            };
+        });
+
+        swatches.forEach(s => {
+            s.onclick = () => {
+                swatches.forEach(sw => sw.classList.remove('active'));
+                s.classList.add('active');
+                selectedColor = s.dataset.code;
+            };
+        });
+
+        function paintCell(r, c) {
+            state[r][c].level = selectedHeight;
+            state[r][c].color = selectedColor;
+            const el = document.getElementById(`cell-${r}-${c}`);
+            el.innerText = `${selectedHeight}${selectedColor}`;
+            el.style.color = getHex(selectedColor);
+            el.style.borderColor = getHex(selectedColor);
+        }
+
+        function clearGrid() {
+            if(confirm("Reset entire grid to 0u?")) {
+                initGrid();
+            }
+        }
+
+        function getHex(code) {
+            const map = { r:'#e74c3c', g:'#2ecc71', b:'#3498db', y:'#f1c40f', o:'#e67e22', p:'#9b59b6', u:'#555' };
+            return map[code];
+        }
+
+        function exportToTxt() {
+            let output = "";
+            for (let r = 0; r < 8; r++) {
+                output += state[r].map(n => `${n.level}${n.color}`).join(',') + (r === 7 ? "" : "\n");
+            }
+            const blob = new Blob([output], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'grid.txt'; a.click();
+        }
+
+        initGrid();
+    </script>
+</body>
+</html>
