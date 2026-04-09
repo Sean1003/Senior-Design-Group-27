@@ -249,24 +249,56 @@
             el.classList.add('active');
         }
 
-        function renderGrid() {
-            gridElement.innerHTML = '';
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    const node = state[r][c];
-                    cell.innerText = `${node.level}${node.color}`;
-                    cell.style.color = getHex(node.color);
-                    cell.style.borderColor = node.color === 'u' ? '#333' : getHex(node.color);
-                    cell.onclick = () => {
-                        state[r][c] = { level: selectedHeight, color: selectedColor };
-                        renderGrid();
-                    };
-                    gridElement.appendChild(cell);
+        let isDrawing = false; // Track if mouse is held down
+
+// Listen for mouse events on the window to stop drawing if the mouse leaves the grid
+window.addEventListener('mousedown', () => isDrawing = true);
+window.addEventListener('mouseup', () => isDrawing = false);
+
+function renderGrid() {
+    gridElement.innerHTML = '';
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            const node = state[r][c];
+            
+            cell.innerText = `${node.level}${node.color}`;
+            cell.style.color = getHex(node.color);
+            cell.style.borderColor = node.color === 'u' ? '#333' : getHex(node.color);
+
+            // Update the updateCell function inside renderGrid()
+const updateCell = () => {
+    state[r][c] = { level: selectedHeight, color: selectedColor };
+    
+    // Update the visual UI
+    cell.innerText = `${selectedHeight}${selectedColor}`;
+    cell.style.color = getHex(selectedColor);
+    cell.style.borderColor = getHex(selectedColor);
+    
+    // REAL-TIME: Only sync the colors to the LEDs immediately
+    if (writer) {
+        syncColorsOnly(); 
+    }
+};
+
+            // CLICK to paint a single dot
+            cell.onmousedown = (e) => {
+                e.preventDefault(); // Prevent text selection while dragging
+                updateCell();
+            };
+
+            // HOVER + MOUSE DOWN to drag paint
+            cell.onmouseenter = () => {
+                if (isDrawing) {
+                    updateCell();
                 }
-            }
+            };
+
+            gridElement.appendChild(cell);
         }
+    }
+}
 
         function loadPreset(name) {
             state = presets[name]();
@@ -319,24 +351,35 @@
             }
         }
 
-        async function syncToESP32() {
-            if (!writer) {
-                alert("Please click 'Connect ESP32' first.");
-                return;
-            }
+        // Add a helper to send ONLY colors for real-time painting
+async function syncColorsOnly() {
+    if (!writer) return;
 
-            // 1. Convert your 'state' array into the CSV string format
-            // This matches exactly what your exportToTxt() does
-            let output = state.map(row => row.map(n => `${n.level}${n.color}`).join(',')).join('\n');
+    // Create a string that sends Level 0 (to keep protocol) + the Live Color
+    // Format: 0g,0r,0b...
+    let colorOnlyData = state.map(row => 
+        row.map(n => `0${n.color}`).join(',')
+    ).join('\n');
 
-            try {
-                // 2. Send the string with the '!' end-marker
-                await writer.write(output + "!");
-                console.log("Data sent to ESP32");
-            } catch (err) {
-                console.error("Write failed", err);
-            }
-        }
+    try {
+        await writer.write(colorOnlyData + "!");
+    } catch (err) {
+        console.error("Fast-sync failed", err);
+    }
+}
+
+// The 'Sync' button still uses the original function
+async function syncToESP32() {
+    if (!writer) return;
+
+    // This sends the ACTUAL levels (1g, 3r, etc.)
+    let fullData = state.map(row => 
+        row.map(n => `${n.level}${n.color}`).join(',')
+    ).join('\n');
+
+    await writer.write(fullData + "!");
+    console.log("Full State (Levels + Colors) Synced!");
+}
     </script>
 </body>
 </html>
