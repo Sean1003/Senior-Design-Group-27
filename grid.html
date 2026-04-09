@@ -144,6 +144,10 @@
 
         <div class="action-group">
             <button class="action-btn clear-btn" onclick="openModal()">Clear Grid</button>
+            
+            <button class="action-btn" style="background: #3498db; color: white;" onclick="connectSerial()">1. Connect ESP32</button>
+            <button class="action-btn" style="background: #8e44ad; color: white;" onclick="syncToESP32()">2. Sync to LEDs</button>
+            
             <button class="action-btn export-btn" onclick="exportToTxt()">Export grid.txt</button>
         </div>
     </div>
@@ -291,6 +295,48 @@
         }
 
         renderGrid();
+
+        let port;
+        let writer;
+
+        // Connection stuff
+
+        async function connectSerial() {
+            try {
+                // Request a port and open a connection
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                
+                // Setup the text encoder so we can send strings
+                const textEncoder = new TextEncoderStream();
+                textEncoder.readable.pipeTo(port.writable);
+                writer = textEncoder.writable.getWriter();
+                
+                alert("Connected to ESP32!");
+            } catch (err) {
+                console.error("Connection failed", err);
+                alert("Connection failed. Make sure you're using Chrome or Edge.");
+            }
+        }
+
+        async function syncToESP32() {
+            if (!writer) {
+                alert("Please click 'Connect ESP32' first.");
+                return;
+            }
+
+            // 1. Convert your 'state' array into the CSV string format
+            // This matches exactly what your exportToTxt() does
+            let output = state.map(row => row.map(n => `${n.level}${n.color}`).join(',')).join('\n');
+
+            try {
+                // 2. Send the string with the '!' end-marker
+                await writer.write(output + "!");
+                console.log("Data sent to ESP32");
+            } catch (err) {
+                console.error("Write failed", err);
+            }
+        }
     </script>
 </body>
 </html>
