@@ -146,7 +146,8 @@
             <button class="action-btn clear-btn" onclick="openModal()">Clear Grid</button>
             
             <button class="action-btn" style="background: #3498db; color: white;" onclick="connectSerial()">1. Connect ESP32</button>
-            <button class="action-btn" style="background: #8e44ad; color: white;" onclick="syncToESP32()">2. Sync to LEDs</button>
+            <button class="action-btn" style="background: #3498db; color: white;" onclick="disconnectSerial()">2. Disconnect ESP32</button>
+            <button class="action-btn" style="background: #8e44ad; color: white;" onclick="syncToESP32()">3. Sync to LEDs</button>
             
             <button class="action-btn export-btn" onclick="exportToTxt()">Export grid.txt</button>
         </div>
@@ -350,6 +351,22 @@ const updateCell = () => {
                 alert("Connection failed. Make sure you're using Chrome or Edge.");
             }
         }
+
+async function disconnectSerial() {
+    try {
+        if (writer) {
+            await writer.close();
+            writer = null;
+        }
+        if (port) {
+            await port.close();
+            port = null;
+        }
+        console.log("Disconnected");
+    } catch (err) {
+        console.error("Error closing port", err);
+    }
+}
 
         // Add a helper to send ONLY colors for real-time painting
 async function syncColorsOnly() {
