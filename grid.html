@@ -363,6 +363,7 @@ async function disconnectSerial() {
             port = null;
         }
         console.log("Disconnected");
+        alert("Disconnected from ESP32");
     } catch (err) {
         console.error("Error closing port", err);
     }
