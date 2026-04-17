@@ -275,10 +275,7 @@ const updateCell = () => {
     cell.innerText = `${selectedHeight}${selectedColor}`;
     cell.style.color = getHex(selectedColor);
     cell.style.borderColor = getHex(selectedColor);
-    
-    // REAL-TIME: Only sync the colors to the LEDs immediately
-    if (writer) {
-        syncColorsOnly(); 
+
     }
 };
 
@@ -331,24 +328,6 @@ const updateCell = () => {
         let port;
         let writer;
 
-      
-
-        // Add a helper to send ONLY colors for real-time painting
-async function syncColorsOnly() {
-    if (!writer) return;
-
-    // Create a string that sends Level 0 (to keep protocol) + the Live Color
-    // Format: 0g,0r,0b...
-    let colorOnlyData = state.map(row => 
-        row.map(n => `0${n.color}`).join(',')
-    ).join('\n');
-
-    try {
-        await writer.write(colorOnlyData + "!");
-    } catch (err) {
-        console.error("Fast-sync failed", err);
-    }
-}
 
 
         async function connectAndSend() {
