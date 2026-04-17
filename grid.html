@@ -347,9 +347,8 @@ const updateCell = () => {
         let ready = false;
         while (!ready) {
             const { value, done } = await reader.read();
-            if (value && value.includes("READY")) {
-                ready = true;
-            }
+           // Wait for READY
+            await waitForKeyword(reader, "READY");
         }
 
          let fullData = state.map(row => 
@@ -396,6 +395,32 @@ async function syncToESP32() {
 
     await writer.write(fullData + "!");
     console.log("Full State (Levels + Colors) Synced!");
+}
+
+async function waitForKeyword(reader, keyword) {
+    let buffer = "";
+
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) throw new Error("Stream closed before receiving " + keyword);
+
+        if (value) {
+            buffer += value;
+
+            // Split into lines
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // keep incomplete line
+
+            for (let line of lines) {
+                line = line.trim();
+                console.log("RX:", line);
+
+                if (line === keyword) {
+                    return; // found it cleanly
+                }
+            }
+        }
+    }
 }
     </script>
 </body>
