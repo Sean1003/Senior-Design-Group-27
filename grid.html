@@ -331,42 +331,7 @@ const updateCell = () => {
         let port;
         let writer;
 
-        // Connection stuff
-
-        async function connectSerial() {
-            try {
-                // Request a port and open a connection
-                port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 115200 });
-                
-                // Setup the text encoder so we can send strings
-                const textEncoder = new TextEncoderStream();
-                textEncoder.readable.pipeTo(port.writable);
-                writer = textEncoder.writable.getWriter();
-                
-                alert("Connected to ESP32!");
-            } catch (err) {
-                console.error("Connection failed", err);
-                alert("Connection failed. Make sure you're using Chrome or Edge.");
-            }
-        }
-
-async function disconnectSerial() {
-    try {
-        if (writer) {
-            await writer.close();
-            writer = null;
-        }
-        if (port) {
-            await port.close();
-            port = null;
-        }
-        console.log("Disconnected");
-        alert("Disconnected from ESP32");
-    } catch (err) {
-        console.error("Error closing port", err);
-    }
-}
+      
 
         // Add a helper to send ONLY colors for real-time painting
 async function syncColorsOnly() {
@@ -385,34 +350,60 @@ async function syncColorsOnly() {
     }
 }
 
-async function connectAndSend() {
-    // Build the same format as syncToESP32: "1g,3r,0b...\n..." + "!"
-    let dataToSend = state.map(row => 
-        row.map(n => `${n.level}${n.color}`).join(',')
-    ).join('\n') + '!';
 
-    let port = null;
-    let writer = null;
+        async function connectAndSend() {
+    let port;
 
     try {
         port = await navigator.serial.requestPort();
         await port.open({ baudRate: 115200 });
 
-        const textEncoder = new TextEncoderStream();
-        textEncoder.readable.pipeTo(port.writable);
-        writer = textEncoder.writable.getWriter();
+        const encoder = new TextEncoderStream();
+        const writableStreamClosed = encoder.readable.pipeTo(port.writable);
+        const writer = encoder.writable.getWriter();
 
-        await writer.write(dataToSend);
+        const decoder = new TextDecoderStream();
+        const readableStreamClosed = port.readable.pipeTo(decoder.writable);
+        const reader = decoder.readable.getReader();
 
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait for READY signal
+        let ready = false;
+        while (!ready) {
+            const { value, done } = await reader.read();
+            if (value && value.includes("READY")) {
+                ready = true;
+            }
+        }
+
+         let fullData = state.map(row => 
+        row.map(n => `${n.level}${n.color}`).join(',')
+    ).join('\n');
+
+        // Send config data
+        await writer.write(fullData + '\n');
+
+        // Wait for OK
+        let confirmed = false;
+        while (!confirmed) {
+            const { value, done } = await reader.read();
+            if (value && value.includes("OK")) {
+                confirmed = true;
+            }
+        }
+
+        // Clean shutdown (this is important)
+        await writer.close();
+        await reader.cancel();
+
+        await writableStreamClosed.catch(() => {});
+        await readableStreamClosed.catch(() => {});
+
+        await port.close();
+
+        console.log("Done and port released");
 
     } catch (err) {
-        console.error("Serial operation failed", err);
-        alert("Failed. Make sure you're using Chrome or Edge.");
-    } finally {
-        try { if (writer) await writer.close(); } catch (e) { console.warn(e); }
-        try { if (port) await port.close(); } catch (e) { console.warn(e); }
-        console.log("Sent and disconnected.");
+        console.error(err);
     }
 }
 
