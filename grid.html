@@ -368,6 +368,7 @@ async function syncColorsOnly() {
 
         // Wait for READY signal
         let ready = false;
+        alert.("Waiting for READY from esp");
         while (!ready) {
             const { value, done } = await reader.read();
             if (value && value.includes("READY")) {
