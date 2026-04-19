@@ -401,8 +401,10 @@ async function syncToESP32() {
 
 async function waitForKeyword(reader, keyword) {
     let buffer = "";
+    console.log("Waiting for the keyword");
 
     while (true) {
+        console.log(buffer);
         const { value, done } = await reader.read();
         if (done) throw new Error("Stream closed before receiving " + keyword);
 
