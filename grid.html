@@ -406,6 +406,7 @@ async function waitForKeyword(reader, keyword) {
     while (true) {
         console.log("Inside the while loop");
         const { value, done } = await reader.read();
+        console.log("Made it through waiting for the reader");
         if (done) throw new Error("Stream closed before receiving " + keyword);
 
         if (value) {
