@@ -346,7 +346,6 @@ const updateCell = () => {
         // Wait for READY signal
         let ready = false;
         while (!ready) {
-            const { value, done } = await reader.read();
            // Wait for READY
             await waitForKeyword(reader, "READY");
         }
