@@ -408,7 +408,6 @@ async function waitForKeyword(reader, keyword) {
         if (done) throw new Error("Stream closed before receiving " + keyword);
 
         if (value) {
-            console.log(JSON.stringify(buffer));
             buffer += value;
 
             // Split into lines
@@ -420,6 +419,7 @@ async function waitForKeyword(reader, keyword) {
                 console.log("RX:", line);
 
                 if (line.includes(keyword)) {
+                    console.log("Leaving awaitKeyword");
                     return; // found it cleanly
                 }
             }
