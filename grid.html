@@ -404,7 +404,7 @@ async function waitForKeyword(reader, keyword) {
     console.log("Waiting for the keyword");
 
     while (true) {
-        console.log(stringify(buffer));
+        console.log("BUFFER RAW:", JSON.stringify(buffer));
         const { value, done } = await reader.read();
         if (done) throw new Error("Stream closed before receiving " + keyword);
 
