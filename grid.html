@@ -342,6 +342,7 @@ const updateCell = () => {
         const decoder = new TextDecoderStream();
         const readableStreamClosed = port.readable.pipeTo(decoder.writable);
         const reader = decoder.readable.getReader();
+        console.log("Going into the ready check");
 
         // Wait for READY signal
         let ready = false;
@@ -349,6 +350,8 @@ const updateCell = () => {
            // Wait for READY
             await waitForKeyword(reader, "READY");
         }
+
+        console.log("Made it passed the ready check");
 
          let fullData = state.map(row => 
         row.map(n => `${n.level}${n.color}`).join(',')
