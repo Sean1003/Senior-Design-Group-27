@@ -417,8 +417,11 @@ async function waitForKeyword(reader, keyword) {
             for (let line of lines) {
                 line = line.trim();
                 console.log("RX:", line);
+                console.log("TYPE:", typeof line);
+                console.log("RAW:", JSON.stringify(line));
+                console.log("LEN:", line.length);
 
-                if (line.includes(keyword)) {
+                if (line === keyword) {
                     console.log("Leaving awaitKeyword");
                     return; // found it cleanly
                 }
