@@ -417,7 +417,7 @@ async function waitForKeyword(reader, keyword) {
                 line = line.trim();
                 console.log("RX:", line);
 
-                if (line === keyword) {
+                if (line.includes(keyword)) {
                     return; // found it cleanly
                 }
             }
